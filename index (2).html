@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MarketInsight — Market Basket Analysis</title>
+<style>
+  :root { --navy:#0b1d3a; --navy2:#12305c; --blue:#2563eb; --blue2:#1d4ed8; --sky:#dbeafe; --bg:#eef2f8; --text:#0f172a; --muted:#64748b; --line:#e5eaf2; --green:#15803d; --amber:#b45309; --red:#b91c1c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh; line-height:1.45; }
+  [hidden] { display:none !important; }
+  svg.i { width:20px; height:20px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* ---------- Sidebar ---------- */
+  nav { width:248px; background:linear-gradient(180deg,var(--navy) 0%,var(--navy2) 100%); color:#cbd5e1; padding:22px 14px; position:fixed; top:0; bottom:0; display:flex; flex-direction:column; }
+  .logo { display:flex; align-items:center; gap:12px; padding:0 8px 4px; }
+  .logo .mark { width:42px; height:42px; border-radius:12px; background:var(--blue); color:#fff; display:grid; place-items:center; box-shadow:0 8px 20px rgba(37,99,235,.5); }
+  .logo b { color:#fff; font-size:19px; display:block; letter-spacing:.2px; }
+  .logo small { font-size:11px; color:#93a4c0; }
+  nav .links { margin-top:26px; }
+  nav a { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; color:#cbd5e1; text-decoration:none; margin-bottom:5px; font-weight:500; transition:background .15s, color .15s, transform .15s; }
+  nav a:hover { background:rgba(255,255,255,.09); color:#fff; transform:translateX(2px); }
+  nav a.on { background:var(--blue); color:#fff; box-shadow:0 8px 18px rgba(37,99,235,.4); }
+  nav .foot { margin-top:auto; font-size:12px; color:#8da0bf; background:rgba(255,255,255,.06); border-radius:12px; padding:12px; }
+  nav .foot b { color:#fff; display:block; margin-bottom:3px; }
+
+  /* ---------- Layout ---------- */
+  main { margin-left:248px; padding:28px 32px 40px; width:100%; max-width:1180px; }
+  section { animation:fade .35s ease; }
+  @keyframes fade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  h2 { margin:0 0 4px; font-size:26px; letter-spacing:-.3px; } .sub { color:var(--muted); margin:0 0 22px; }
+  .card { background:#fff; border-radius:16px; padding:20px; margin-bottom:20px; box-shadow:0 1px 2px rgba(15,23,42,.05), 0 8px 24px rgba(15,23,42,.06); border:1px solid rgba(229,234,242,.8); }
+  .card h3 { margin:0 0 14px; font-size:16px; display:flex; align-items:center; gap:8px; }
+  .card h3::before { content:""; width:4px; height:18px; border-radius:2px; background:var(--blue); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:20px; }
+  .grid.four { grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); }
+  .grid > .card { margin-bottom:0; } .grid { margin-bottom:20px; }
+
+  /* ---------- Hero ---------- */
+  .hero { position:relative; overflow:hidden; border-radius:20px; padding:30px 32px; margin-bottom:20px; color:#fff; background:linear-gradient(120deg,#1e40af 0%,#2563eb 55%,#3b82f6 100%); box-shadow:0 14px 34px rgba(37,99,235,.35); }
+  .hero::before, .hero::after { content:""; position:absolute; border-radius:50%; background:rgba(255,255,255,.1); }
+  .hero::before { width:260px; height:260px; right:-60px; top:-90px; } .hero::after { width:160px; height:160px; right:140px; bottom:-90px; }
+  .hero > * { position:relative; z-index:1; }
+  .hero small { opacity:.85; font-weight:600; letter-spacing:.5px; text-transform:uppercase; font-size:12px; }
+  .hero h2 { color:#fff; font-size:32px; margin:6px 0 4px; }
+  .hero p { margin:0 0 16px; max-width:560px; opacity:.92; }
+  .hero .ds { display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.16); padding:6px 12px; border-radius:99px; font-size:13px; margin-bottom:16px; }
+  .hero button { background:#fff; color:var(--blue2); font-weight:700; box-shadow:0 6px 16px rgba(0,0,0,.18); }
+  .hero button.ghost { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.55); box-shadow:none; }
+
+  /* ---------- KPI cards ---------- */
+  .kpi { display:flex; align-items:center; gap:14px; transition:transform .15s, box-shadow .15s; }
+  .kpi:hover { transform:translateY(-3px); box-shadow:0 14px 30px rgba(15,23,42,.12); }
+  .kpi i { width:52px; height:52px; border-radius:14px; display:grid; place-items:center; font-size:24px; font-style:normal; flex:none; }
+  .c1 { background:#dbeafe; } .c2 { background:#ccfbf1; } .c3 { background:#ede9fe; } .c4 { background:#fef3c7; }
+  .kpi b { display:block; font-size:30px; line-height:1.1; } .kpi span { color:var(--muted); font-size:13px; }
+  .tag { background:#fef3c7; color:var(--amber); font-size:11px; font-weight:800; padding:3px 9px; border-radius:99px; letter-spacing:.4px; }
+  .hero .tag { background:#fde68a; color:#78350f; }
+
+  /* ---------- Messages ---------- */
+  .msg { padding:11px 14px; border-radius:10px; margin:12px 0; font-size:14px; border-left:4px solid; }
+  .err { background:#fee2e2; color:var(--red); border-color:var(--red); } .ok { background:#dcfce7; color:var(--green); border-color:var(--green); } .info { background:#eff6ff; color:#1e3a8a; border-color:var(--blue); }
+
+  /* ---------- Buttons & inputs ---------- */
+  button { background:var(--blue); color:#fff; border:0; padding:11px 18px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; margin:4px 8px 4px 0; transition:background .15s, transform .1s, box-shadow .15s; box-shadow:0 4px 12px rgba(37,99,235,.28); }
+  button:hover { background:var(--blue2); transform:translateY(-1px); } button:active { transform:none; }
+  button.light { background:#fff; color:var(--text); border:1px solid #cbd5e1; box-shadow:none; } button.light:hover { background:#f1f5f9; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  input, select { padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; max-width:100%; background:#fff; color:var(--text); }
+  input:focus, select:focus, button:focus-visible { outline:3px solid rgba(59,130,246,.45); outline-offset:1px; border-color:var(--blue); }
+  label { font-size:13px; font-weight:600; color:#475569; display:inline-block; margin:0 16px 12px 0; } label input, label select { display:block; margin-top:5px; width:140px; }
+  input[type=search] { width:260px; }
+
+  /* ---------- Tables ---------- */
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:11px 12px; border-bottom:1px solid var(--line); }
+  th { background:#f6f8fc; color:#475569; font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+  tbody tr:hover td { background:#f8fafd; } tr:last-child td { border-bottom:0; }
+  th.sort { cursor:pointer; user-select:none; } th.sort:hover { color:var(--blue); }
+  .scroll { overflow-x:auto; border:1px solid var(--line); border-radius:12px; margin:10px 0; }
+  .pill { background:var(--sky); color:#1e3a8a; padding:3px 10px; border-radius:99px; font-size:13px; font-weight:500; margin:2px 4px 2px 0; display:inline-block; }
+  .meter { display:inline-block; width:64px; height:7px; background:var(--line); border-radius:4px; vertical-align:middle; margin-right:8px; overflow:hidden; }
+  .meter span { display:block; height:100%; background:linear-gradient(90deg,#60a5fa,var(--blue2)); border-radius:4px; }
+  .lift { font-weight:700; padding:3px 10px; border-radius:99px; font-size:13px; display:inline-block; }
+  .lift.hi { background:#dcfce7; color:var(--green); } .lift.mid { background:var(--sky); color:var(--blue2); } .lift.flat { background:#e2e8f0; color:#475569; } .lift.low { background:#fee2e2; color:var(--red); }
+
+  /* ---------- Bar chart ---------- */
+  .bar { display:flex; align-items:center; margin:9px 0; font-size:14px; gap:10px; }
+  .bar .rank { width:22px; height:22px; border-radius:50%; background:var(--sky); color:var(--blue2); font-size:12px; font-weight:700; display:grid; place-items:center; flex:none; }
+  .bar .name { width:112px; flex:none; font-weight:500; } .bar .track { flex:1; background:#edf1f7; border-radius:8px; height:16px; overflow:hidden; }
+  .bar .fill { display:block; height:100%; border-radius:8px; background:linear-gradient(90deg,#3b82f6,#1d4ed8); transition:width .6s ease; } .bar .num { width:42px; text-align:right; font-weight:700; flex:none; }
+
+  /* ---------- Upload & recommendations ---------- */
+  .drop { display:block; border:2px dashed #93c5fd; background:linear-gradient(180deg,#f3f8ff,#e8f1ff); border-radius:16px; padding:36px 20px; text-align:center; cursor:pointer; transition:all .15s; }
+  .drop:hover, .drop.over { background:#dbeafe; border-color:var(--blue); transform:scale(1.01); }
+  .drop .big { font-size:38px; display:block; margin-bottom:6px; }
+  .rec { border:1px solid var(--line); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:6px; transition:transform .15s, box-shadow .15s; background:#fff; }
+  .rec:hover { transform:translateY(-3px); box-shadow:0 12px 26px rgba(15,23,42,.1); }
+  .rec .top { display:flex; align-items:center; gap:10px; } .rec .em { width:42px; height:42px; border-radius:12px; background:var(--sky); display:grid; place-items:center; font-size:22px; }
+  .rec b { font-size:15px; } .rec small { color:var(--muted); display:block; }
+  .rec .track { height:8px; background:var(--line); border-radius:4px; overflow:hidden; } .rec .track span { display:block; height:100%; background:linear-gradient(90deg,#60a5fa,var(--blue2)); }
+  .rec .cf { display:flex; justify-content:space-between; font-size:13px; font-weight:600; }
+  .note { color:var(--muted); font-size:13px; }
+  #reportBody h3 { margin-top:20px; } #reportBody h3:first-child { margin-top:0; }
+  #reportBody table { margin:6px 0 10px; }
+
+  /* ---------- Mobile & print ---------- */
+  @media (max-width:860px) {
+    body { flex-direction:column; }
+    nav { position:static; width:100%; padding:14px; } nav .foot { display:none; } nav .links { margin-top:12px; display:flex; gap:8px; overflow-x:auto; }
+    nav a { white-space:nowrap; margin:0; padding:10px 14px; } nav a:hover { transform:none; }
+    main { margin:0; padding:18px 16px 32px; } .hero { padding:22px 20px; } .hero h2 { font-size:26px; }
+    .bar .name { width:84px; }
+  }
+  @media print { nav, .noprint, .hero { display:none !important; } main { margin:0; padding:0; } body { background:#fff; } .card { box-shadow:none; border:0; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <div class="mark"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></div>
+    <div><b>MarketInsight</b><small>Basket Analysis</small></div>
+  </div>
+  <div class="links">
+    <a href="#dashboard"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a href="#upload"><svg class="i" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Data</a>
+    <a href="#rules"><svg class="i" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>Association Rules</a>
+    <a href="#recs"><svg class="i" viewBox="0 0 24 24"><polygon points="12 2 15 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.3 12 2"/></svg>Recommendations</a>
+    <a href="#report"><svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Report</a>
+  </div>
+  <div class="foot"><b>100% private</b>Your files never leave this browser.</div>
+</nav>
+
+<main>
+
+<!-- ============ DASHBOARD ============ -->
+<section id="page-dashboard">
+  <div class="hero">
+    <small>Market Basket Analysis System</small>
+    <h2>Discover Hidden Customer Purchase Patterns</h2>
+    <p>Find out which products customers buy together, then use it for smarter shelves, bundles and offers. Everything runs in your browser.</p>
+    <div class="ds">Dataset: <b id="dsName"></b> <span class="tag" id="demoTag">DEMO DATA</span></div><br>
+    <button onclick="location.hash='upload'">Upload Transaction Data</button>
+    <button class="ghost" onclick="loadDemo()">View Sample Data</button>
+  </div>
+  <div class="grid four">
+    <div class="card kpi"><i class="c1">🛒</i><div><b id="kTx">–</b><span>Total Transactions</span></div></div>
+    <div class="card kpi"><i class="c2">📦</i><div><b id="kProd">–</b><span>Total Products</span></div></div>
+    <div class="card kpi"><i class="c3">👥</i><div><b id="kCust">–</b><span>Unique Customers</span></div></div>
+    <div class="card kpi"><i class="c4">🔗</i><div><b id="kRules">–</b><span>Association Rules</span></div></div>
+  </div>
+  <div class="grid">
+    <div class="card"><h3>Top 10 Most Purchased Products</h3><div id="topBars"></div></div>
+    <div class="card"><h3>Top Association Rules</h3><div class="scroll"><table><thead><tr><th>If buys</th><th>Then buys</th><th>Conf.</th><th>Lift</th></tr></thead><tbody id="topRules"></tbody></table></div></div>
+  </div>
+  <div class="card"><h3>Product Recommendations</h3><div class="grid" id="dashRecs"></div></div>
+</section>
+
+<!-- ============ UPLOAD ============ -->
+<section id="page-upload" hidden>
+  <h2>Upload Transaction Data</h2>
+  <p class="sub">Upload a CSV file. Your file stays on your computer.</p>
+  <div class="grid">
+    <div class="card">
+      <label class="drop" id="drop" style="display:block;margin:0;width:auto">
+        <span class="big">📁</span><b>Drag &amp; drop a CSV file here</b><br>or click to choose a file
+        <input type="file" id="file" accept=".csv" hidden>
+      </label>
+      <div id="upMsg"></div>
+      <div id="upInfo" hidden>
+        <p><b id="upName"></b> (<span id="upSize"></span>)<br><span id="upDetail" style="color:#64748b"></span></p>
+        <button id="btnAnalyze">Analyze Dataset</button>
+        <button class="light" id="btnRemove">Remove File</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Accepted formats</h3>
+      <p><b>Format A</b>: one transaction per row</p>
+      <table><tr><th>TransactionID</th><th>Items</th></tr><tr><td>T001</td><td>Milk; Bread; Eggs</td></tr><tr><td>T002</td><td>Bread; Butter</td></tr></table>
+      <p><b>Format B</b>: one product per row</p>
+      <table><tr><th>TransactionID</th><th>Product</th></tr><tr><td>T001</td><td>Milk</td></tr><tr><td>T001</td><td>Bread</td></tr><tr><td>T002</td><td>Butter</td></tr></table>
+      <p class="note">First row must be a header. A column named "Customer" is optional. Columns are detected automatically.</p>
+      <button class="light" onclick="downloadSample('A')">Sample CSV (Format A)</button>
+      <button class="light" onclick="downloadSample('B')">Sample CSV (Format B)</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RULES ============ -->
+<section id="page-rules" hidden>
+  <h2>Association Rules</h2>
+  <p class="sub">Set the thresholds, run the analysis, then search and sort the rules.</p>
+  <div class="card">
+    <h3>Analysis settings</h3>
+    <label>Minimum support (%)<input type="number" id="pSup" value="5" step="0.1"></label>
+    <label>Minimum confidence (%)<input type="number" id="pConf" value="50"></label>
+    <label>Minimum lift<input type="number" id="pLift" value="1" step="0.1"></label>
+    <label>Max itemset size<input type="number" id="pSize" value="3" min="2" max="5"></label><br>
+    <button id="btnRun">Run Analysis</button>
+    <div id="runMsg"></div>
+    <p class="note">Good support values depend on your data: small datasets can use 5% or more, large stores often use 0.5–2%. If you get no rules, lower the support first.</p>
+  </div>
+  <div class="card">
+    <input type="search" id="q" placeholder="Search product…">
+    <span id="ruleCount" class="note" style="margin-left:10px"></span>
+    <div class="scroll"><table>
+      <thead><tr><th>#</th><th>If customer buys</th><th>Then may also buy</th>
+        <th class="sort" data-k="sup">Support ⇅</th><th class="sort" data-k="conf">Confidence ⇅</th><th class="sort" data-k="lift">Lift ⇅</th></tr></thead>
+      <tbody id="ruleRows"></tbody>
+    </table></div>
+    <p class="note"><b>Support</b> = share of all transactions that contain both sides. <b>Confidence</b> = of the transactions with the "if" items, the share that also have the "then" items. <b>Lift</b> = confidence ÷ how common the "then" items are overall: above 1 means a real positive link, about 1 means no link, below 1 means a negative link.</p>
+    <button class="light" onclick="downloadRules()">Export Rules (CSV)</button>
+  </div>
+</section>
+
+<!-- ============ RECOMMENDATIONS ============ -->
+<section id="page-recs" hidden>
+  <h2>Product Recommendations</h2>
+  <p class="sub">Pick a product to see what customers often buy with it.</p>
+  <div class="card">
+    <label style="width:260px">Product<select id="recProduct" style="width:100%"></select></label>
+    <div class="msg info">These are suggestions based on past purchases, not guaranteed future buying.</div>
+    <div class="scroll"><table>
+      <thead><tr><th>Recommended product</th><th>Support</th><th>Confidence</th><th>Lift</th><th>Transactions</th></tr></thead>
+      <tbody id="recRows"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ============ REPORT ============ -->
+<section id="page-report" hidden>
+  <h2>Report</h2>
+  <p class="sub">A summary of the current analysis.</p>
+  <div class="card noprint">
+    <button onclick="window.print()">Print / Save as PDF</button>
+    <button class="light" onclick="downloadRules()">Export Rules (CSV)</button>
+    <button class="light" onclick="downloadProducts()">Export Products (CSV)</button>
+  </div>
+  <div class="card" id="reportBody"></div>
+</section>
+
+</main>
+
+<script>
+/* =====================================================================
+   MarketInsight — simple version. Sections:
+   1. ENGINE   : CSV reading, Apriori, rules (pure functions, no page code)
+   2. DEMO     : sample data
+   3. PAGES    : showing results on screen
+   4. EVENTS   : buttons, file upload, navigation
+   ===================================================================== */
+
+// ENGINE START
+const SEP = '\u0001';          // joins product names into one key
+const MAX_TX = 20000;          // keeps the browser responsive
+
+/* ---- Read a CSV text into rows (handles quotes and commas inside quotes) ---- */
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const firstLine = text.split(/\r?\n/)[0];
+  // pick the separator that appears most in the header row
+  const d = [',', ';', '\t', '|'].map(c => [c, firstLine.split(c).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const rows = []; let row = [], cell = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === d) { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else cell += ch;
+  }
+  if (quoted) throw new Error('A quote (") was opened but never closed. Please check the file.');
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim() !== ''));
+}
+
+/* ---- Turn rows into transactions: [["Milk","Bread"], ...]. Works for Format A and B ---- */
+function buildTransactions(rows) {
+  if (rows.length < 2) throw new Error('The file has no data rows. It needs a header row and at least one transaction.');
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  if (head.length < 2) throw new Error('Only one column found. You need a transaction ID column and a product/items column.');
+  let t = head.findIndex(h => /trans|order|invoice|basket|receipt|bill/.test(h)); if (t < 0) t = 0;
+  const c = head.findIndex((h, i) => i !== t && /cust|client|member/.test(h));
+  let p = head.findIndex((h, i) => i !== t && i !== c && /item|product|desc|sku/.test(h));
+  if (p < 0) p = head.findIndex((h, i) => i !== t && i !== c);
+
+  const groups = new Map(); const customers = new Set();
+  const spelling = new Map();     // "milk" -> "Milk": same product written in different letter case counts as one
+  let skipped = 0;
+  for (const r of rows.slice(1)) {
+    const id = (r[t] || '').trim();
+    if (!id) { skipped++; continue; }
+    if (!groups.has(id)) groups.set(id, new Map());
+    if (c >= 0 && (r[c] || '').trim()) customers.add(r[c].trim());
+    for (const name of (r[p] || '').split(/[;|,]/)) {
+      const n = name.replace(/\s+/g, ' ').trim();
+      if (!n) continue;
+      if (!spelling.has(n.toLowerCase())) spelling.set(n.toLowerCase(), n);
+      groups.get(id).set(n.toLowerCase(), spelling.get(n.toLowerCase()));   // same product only once per basket
+    }
+  }
+  const tx = [...groups.values()].map(m => [...m.values()]).filter(items => items.length > 0);
+  if (tx.length < 2) throw new Error('Fewer than 2 transactions could be read. Check that the transaction ID and product columns are correct.');
+  if (!tx.some(items => items.length > 1)) throw new Error('No transaction has more than one product, so there is nothing to compare. Check the product separator (use ; between products).');
+  if (tx.length > MAX_TX) throw new Error('This file has ' + tx.length + ' transactions. The limit is ' + MAX_TX + ' to keep your browser fast.');
+  return { tx, customers: c >= 0 ? customers.size : null, skipped, columns: [rows[0][t].trim(), rows[0][p].trim(), c >= 0 ? rows[0][c].trim() : null] };
+}
+
+/* ---- Apriori: find itemsets that appear in at least minCount transactions ---- */
+async function apriori(tx, minCount, maxSize) {
+  const sets = tx.map(items => new Set(items));
+  const counts = new Map();             // "A␁B" -> number of transactions containing all of them
+  const single = {};
+  tx.forEach(items => items.forEach(i => single[i] = (single[i] || 0) + 1));
+  let level = Object.keys(single).sort().filter(i => single[i] >= minCount).map(i => [i]);
+  level.forEach(x => counts.set(x[0], single[x[0]]));
+  let warning = '';
+
+  for (let k = 2; k <= maxSize && level.length > 1; k++) {
+    // 1) build candidates by joining itemsets that share their first k-2 items
+    const known = new Set(level.map(x => x.join(SEP)));
+    const candidates = [];
+    for (let i = 0; i < level.length; i++) {
+      for (let j = i + 1; j < level.length; j++) {
+        if (level[i].slice(0, k - 2).join(SEP) !== level[j].slice(0, k - 2).join(SEP)) break;
+        const cand = level[i].concat(level[j][k - 2]);
+        // 2) Apriori rule: every smaller piece must already be frequent
+        const ok = cand.every((_, skip) => known.has(cand.filter((_, n) => n !== skip).join(SEP)));
+        if (ok) candidates.push(cand);
+      }
+    }
+    if (candidates.length > 5000) { candidates.length = 5000; warning = 'Too many combinations: results were limited. Raise the minimum support.'; }
+    // 3) count each candidate in the real transactions
+    level = [];
+    for (const cand of candidates) {
+      let n = 0;
+      for (const s of sets) if (cand.every(i => s.has(i))) n++;
+      if (n >= minCount) { level.push(cand); counts.set(cand.join(SEP), n); }
+    }
+    await new Promise(r => setTimeout(r));   // let the page breathe
+  }
+  return { counts, warning };
+}
+
+/* ---- Rules:  A → B.  support = n(A∪B)/N,  confidence = n(A∪B)/n(A),  lift = confidence / (n(B)/N) ---- */
+function makeRules(counts, N, minConf, minLift) {
+  const rules = [];
+  for (const [key, n] of counts) {
+    const items = key.split(SEP);
+    if (items.length < 2) continue;
+    for (let mask = 1; mask < (1 << items.length) - 1; mask++) {     // every way to split the itemset in two
+      const A = [], B = [];
+      items.forEach((it, i) => ((mask >> i) & 1 ? A : B).push(it));
+      const nA = counts.get(A.join(SEP)), nB = counts.get(B.join(SEP));
+      const conf = n / nA, lift = conf / (nB / N);
+      if (conf >= minConf - 1e-9 && lift >= minLift - 1e-9) rules.push({ A, B, sup: n / N, conf, lift, n });
+    }
+  }
+  return rules.sort((x, y) => y.lift - x.lift || y.conf - x.conf);
+}
+// ENGINE END
+
+/* =====================================================================
+   2. DEMO DATA (same every time)
+   ===================================================================== */
+function demoRows() {
+  let seed = 12345;
+  const rand = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+  // each "habit" is a group of products often bought together, with the chance each is picked
+  const habits = [
+    [['Milk', .9], ['Bread', .85], ['Eggs', .7], ['Butter', .5]],
+    [['Coffee', .95], ['Sugar', .8], ['Milk', .5]],
+    [['Chicken', .95], ['Rice', .85], ['Onions', .5], ['Tomatoes', .5]],
+    [['Apples', .85], ['Bananas', .85], ['Yogurt', .35]],
+    [['Pasta', .95], ['Tomatoes', .8], ['Cheese', .6]]
+  ];
+  const extras = ['Milk', 'Bread', 'Eggs', 'Butter', 'Coffee', 'Sugar', 'Bananas', 'Chicken', 'Rice', 'Apples', 'Onions', 'Tomatoes', 'Pasta', 'Cheese', 'Yogurt'];
+  const rows = [];
+  for (let i = 1; i <= 400; i++) {
+    const basket = new Set();
+    habits[Math.floor(rand() * habits.length)].forEach(([name, p]) => { if (rand() < p) basket.add(name); });
+    if (rand() < 0.4) basket.add(extras[Math.floor(rand() * extras.length)]);
+    if (!basket.size) basket.add('Milk');
+    rows.push(['T' + String(i).padStart(3, '0'), 'C' + (1 + Math.floor(rand() * 150)), [...basket].join('; ')]);
+  }
+  return rows;
+}
+
+/* =====================================================================
+   3. PAGES
+   ===================================================================== */
+const S = { tx: [], name: '', demo: true, customers: null, counts: new Map(), rules: [], freq: [], sortKey: 'lift', sortDir: -1 };
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pct = x => (x * 100).toFixed(1) + '%';
+const ICONS = { milk:'🥛', bread:'🍞', eggs:'🥚', butter:'🧈', coffee:'☕', sugar:'🍬', bananas:'🍌', chicken:'🍗', rice:'🍚', apples:'🍎', onions:'🧅', tomatoes:'🍅', pasta:'🍝', cheese:'🧀', yogurt:'🥣', tea:'🍵', jam:'🍓' };
+const icon = n => ICONS[n.toLowerCase()] || '🛒';
+const meter = x => '<span class="meter"><span style="width:' + Math.round(x * 100) + '%"></span></span>' + pct(x);
+const liftPill = l => '<span class="lift ' + (l >= 1.5 ? 'hi' : l > 1.05 ? 'mid' : l < 0.95 ? 'low' : 'flat') + '">' + l.toFixed(2) + '</span>';
+const pills = list => list.map(n => '<span class="pill">' + esc(n) + '</span>').join('');
+const say = (el, text, cls) => { $(el).innerHTML = text ? '<div class="msg ' + cls + '">' + esc(text) + '</div>' : ''; };
+
+/* Load a dataset and run the analysis with the current settings */
+async function useDataset(parsed, name, isDemo) {
+  S.tx = parsed.tx; S.customers = parsed.customers; S.name = name; S.demo = isDemo;
+  const f = {}; S.tx.forEach(t => t.forEach(i => f[i] = (f[i] || 0) + 1));
+  S.freq = Object.entries(f).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  return runAnalysis();
+}
+
+function readSettings() {
+  const v = { sup: +$('#pSup').value, conf: +$('#pConf').value, lift: +$('#pLift').value, size: +$('#pSize').value };
+  if (!(v.sup >= 0.1 && v.sup <= 100)) return 'Minimum support must be between 0.1 and 100.';
+  if (!(v.conf >= 0 && v.conf <= 100)) return 'Minimum confidence must be between 0 and 100.';
+  if (!(v.lift >= 0)) return 'Minimum lift must be 0 or more.';
+  if (!(Number.isInteger(v.size) && v.size >= 2 && v.size <= 5)) return 'Max itemset size must be a whole number from 2 to 5.';
+  return v;
+}
+
+async function runAnalysis() {
+  const v = readSettings();
+  if (typeof v === 'string') { say('#runMsg', v, 'err'); return false; }
+  say('#runMsg', 'Analyzing… please wait', 'info');
+  await new Promise(r => setTimeout(r, 30));
+  const N = S.tx.length, minCount = Math.max(1, Math.ceil(v.sup / 100 * N - 1e-9));
+  const { counts, warning } = await apriori(S.tx, minCount, v.size);
+  S.counts = counts;
+  S.rules = makeRules(counts, N, v.conf / 100, v.lift);
+  say('#runMsg', S.rules.length
+    ? 'Done: ' + S.rules.length + ' rules found (an itemset must appear in at least ' + minCount + ' of ' + N + ' transactions). ' + warning
+    : 'No rules met these settings. Try a lower minimum support. ' + warning, S.rules.length ? 'ok' : 'err');
+  showAll();
+  return true;
+}
+
+function showAll() {
+  // Dashboard
+  $('#dsName').textContent = S.name; $('#demoTag').hidden = !S.demo;
+  $('#kTx').textContent = S.tx.length; $('#kProd').textContent = S.freq.length;
+  $('#kCust').textContent = S.customers == null ? 'N/A' : S.customers; $('#kRules').textContent = S.rules.length;
+  const top = S.freq.slice(0, 10), max = top[0][1];
+  $('#topBars').innerHTML = top.map(([n, c], i) => '<div class="bar"><span class="rank">' + (i + 1) + '</span><span class="name">' + icon(n) + ' ' + esc(n) + '</span><span class="track"><span class="fill" style="width:' + (c / max * 100) + '%"></span></span><span class="num">' + c + '</span></div>').join('');
+  $('#topRules').innerHTML = S.rules.slice(0, 5).map(r => '<tr><td>' + pills(r.A) + '</td><td>' + pills(r.B) + '</td><td>' + pct(r.conf) + '</td><td>' + liftPill(r.lift) + '</td></tr>').join('')
+    || '<tr><td colspan="4">No rules yet. Lower the minimum support.</td></tr>';
+  const pairs = S.rules.filter(r => r.A.length === 1 && r.B.length === 1).sort((a, b) => b.conf - a.conf).slice(0, 4);
+  $('#dashRecs').innerHTML = pairs.map(r => '<div class="rec"><div class="top"><div class="em">' + icon(r.B[0]) + '</div><div><b>' + esc(r.B[0]) + '</b><small>Often bought with ' + esc(r.A[0]) + '</small></div></div><div class="track"><span style="width:' + Math.round(r.conf * 100) + '%"></span></div><div class="cf"><span>Confidence</span><span>' + pct(r.conf) + '</span></div></div>').join('')
+    || '<p>No recommendations yet.</p>';
+  showRules(); showRecProducts(); showReport();
+}
+
+function showRules() {
+  const q = $('#q').value.trim().toLowerCase();
+  const list = S.rules.filter(r => !q || (r.A.join(' ') + ' ' + r.B.join(' ')).toLowerCase().includes(q))
+    .sort((a, b) => S.sortDir * (a[S.sortKey] - b[S.sortKey]));
+  $('#ruleCount').textContent = 'Showing ' + Math.min(list.length, 100) + ' of ' + list.length + ' rules';
+  $('#ruleRows').innerHTML = list.slice(0, 100).map((r, i) => '<tr><td>' + (i + 1) + '</td><td>' + pills(r.A) + '</td><td>' + pills(r.B) + '</td><td>' + pct(r.sup) + '</td><td>' + meter(r.conf) + '</td><td>' + liftPill(r.lift) + '</td></tr>').join('')
+    || '<tr><td colspan="6">No rules to show.</td></tr>';
+}
+
+function showRecProducts() {
+  const sel = $('#recProduct'), keep = sel.value;
+  sel.innerHTML = S.freq.map(([n]) => '<option>' + esc(n) + '</option>').join('');
+  if (S.freq.some(([n]) => n === keep)) sel.value = keep;
+  showRecs();
+}
+
+function showRecs() {
+  const p = $('#recProduct').value;
+  const list = S.rules.filter(r => r.A.length === 1 && r.B.length === 1 && r.A[0] === p).sort((a, b) => b.conf - a.conf);
+  $('#recRows').innerHTML = list.map(r => '<tr><td><b>' + icon(r.B[0]) + ' ' + esc(r.B[0]) + '</b></td><td>' + pct(r.sup) + '</td><td>' + meter(r.conf) + '</td><td>' + liftPill(r.lift) + '</td><td>' + r.n + '</td></tr>').join('')
+    || '<tr><td colspan="5">No supported recommendations for ' + esc(p) + '. Try a lower minimum support on the Association Rules page.</td></tr>';
+}
+
+function showReport() {
+  const byLift = S.rules.slice(0, 5), byConf = S.rules.slice().sort((a, b) => b.conf - a.conf).slice(0, 5);
+  const table = list => '<table><tr><th>If buys</th><th>Then buys</th><th>Support</th><th>Confidence</th><th>Lift</th></tr>' +
+    list.map(r => '<tr><td>' + esc(r.A.join(', ')) + '</td><td>' + esc(r.B.join(', ')) + '</td><td>' + pct(r.sup) + '</td><td>' + pct(r.conf) + '</td><td>' + r.lift.toFixed(2) + '</td></tr>').join('') + '</table>';
+  const itemsets = [...S.counts.keys()].filter(k => k.includes(SEP)).length;
+  $('#reportBody').innerHTML =
+    '<h3>Dataset summary</h3><p>' + esc(S.name) + (S.demo ? ' (demo data)' : '') + ': ' + S.tx.length + ' transactions, ' + S.freq.length + ' products' +
+    (S.customers == null ? '' : ', ' + S.customers + ' customers') + '.<br>Frequent itemsets (2+ products): ' + itemsets + '. Association rules: ' + S.rules.length + '.</p>' +
+    '<h3>Settings used</h3><p>Minimum support ' + $('#pSup').value + '%, confidence ' + $('#pConf').value + '%, lift ' + $('#pLift').value + ', max itemset size ' + $('#pSize').value + '.</p>' +
+    '<h3>Most purchased products</h3><p>' + S.freq.slice(0, 5).map(([n, c]) => esc(n) + ' (' + c + ')').join(', ') + '</p>' +
+    '<h3>Strongest rules by lift</h3>' + (byLift.length ? table(byLift) : '<p>None</p>') +
+    '<h3>Strongest rules by confidence</h3>' + (byConf.length ? table(byConf) : '<p>None</p>') +
+    '<p class="note">Rules show links found in past purchases. They are suggestions, not guarantees.</p>';
+}
+
+/* ---- Downloads ---- */
+function download(name, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+const cell = v => { v = String(v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+function downloadRules() {
+  if (!S.rules.length) return alert('There are no rules to export yet.');
+  download('association-rules.csv', ['If buys,Then buys,Support %,Confidence %,Lift,Transactions']
+    .concat(S.rules.map(r => [r.A.join('; '), r.B.join('; '), (r.sup * 100).toFixed(2), (r.conf * 100).toFixed(2), r.lift.toFixed(3), r.n].map(cell).join(','))).join('\r\n'));
+}
+function downloadProducts() {
+  download('product-frequencies.csv', ['Product,Transactions,Support %']
+    .concat(S.freq.map(([n, c]) => [n, c, (c / S.tx.length * 100).toFixed(2)].map(cell).join(','))).join('\r\n'));
+}
+function downloadSample(format) {
+  const rows = demoRows().slice(0, 60);
+  const lines = format === 'A' ? ['TransactionID,Customer,Items'].concat(rows.map(r => r.join(',')))
+    : ['TransactionID,Customer,Product'].concat(rows.flatMap(r => r[2].split('; ').map(p => [r[0], r[1], p].join(','))));
+  download('sample-format-' + format + '.csv', lines.join('\r\n'));
+}
+
+/* =====================================================================
+   4. EVENTS
+   ===================================================================== */
+let pending = null;   // a parsed file waiting for "Analyze Dataset"
+
+function loadDemo() {
+  const rows = [['TransactionID', 'Customer', 'Items']].concat(demoRows());
+  useDataset(buildTransactions(rows), 'Demo retail dataset', true);
+}
+
+function chooseFile(file) {
+  pending = null; $('#upInfo').hidden = true; say('#upMsg', '');
+  if (!file) return;
+  if (!/\.csv$/i.test(file.name)) return say('#upMsg', '"' + file.name + '" is not a CSV file. Please choose a .csv file (in Excel: Save As → CSV).', 'err');
+  if (file.size === 0) return say('#upMsg', 'The file is empty.', 'err');
+  if (file.size > 25 * 1024 * 1024) return say('#upMsg', 'The file is too big (limit 25 MB).', 'err');
+  const reader = new FileReader();
+  reader.onerror = () => say('#upMsg', 'The file could not be read.', 'err');
+  reader.onload = () => {
+    try {
+      pending = buildTransactions(parseCSV(String(reader.result)));
+      pending.name = file.name;
+      $('#upName').textContent = file.name; $('#upSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      $('#upDetail').textContent = pending.tx.length + ' transactions found. Columns used: ID = "' + pending.columns[0] + '", products = "' + pending.columns[1] + '"' +
+        (pending.columns[2] ? ', customer = "' + pending.columns[2] + '"' : '') + (pending.skipped ? '. ' + pending.skipped + ' rows without an ID will be ignored' : '') + '.';
+      $('#upInfo').hidden = false;
+    } catch (e) { say('#upMsg', e.message, 'err'); }
+  };
+  reader.readAsText(file);
+}
+
+$('#file').addEventListener('change', e => chooseFile(e.target.files[0]));
+$('#drop').addEventListener('dragover', e => { e.preventDefault(); $('#drop').classList.add('over'); });
+$('#drop').addEventListener('dragleave', () => $('#drop').classList.remove('over'));
+$('#drop').addEventListener('drop', e => { e.preventDefault(); $('#drop').classList.remove('over'); chooseFile(e.dataTransfer.files[0]); });
+$('#btnRemove').onclick = () => { pending = null; $('#file').value = ''; $('#upInfo').hidden = true; say('#upMsg', 'File removed.', 'info'); };
+$('#btnAnalyze').onclick = async () => {
+  if (!pending) return;
+  if (await useDataset(pending, pending.name, false)) location.hash = 'rules';
+};
+$('#btnRun').onclick = runAnalysis;
+$('#q').oninput = showRules;
+$('#recProduct').onchange = showRecs;
+document.querySelectorAll('th.sort').forEach(th => th.onclick = () => {
+  S.sortDir = S.sortKey === th.dataset.k ? -S.sortDir : -1; S.sortKey = th.dataset.k; showRules();
+});
+
+/* Page switching with the menu */
+function route() {
+  const page = ['dashboard', 'upload', 'rules', 'recs', 'report'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'dashboard';
+  document.querySelectorAll('section').forEach(s => s.hidden = s.id !== 'page-' + page);
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.hash === '#' + page));
+}
+window.addEventListener('hashchange', route);
+route();
+loadDemo();      // the demo data opens automatically
+</script>
+</body>
+</html>
